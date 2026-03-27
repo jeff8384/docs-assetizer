@@ -1,0 +1,21 @@
+{
+  "name": "docs-assetizer",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "playwright": "latest",
+    "commander": "latest",
+    "zod": "latest",
+    "slugify": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "tsx": "latest",
+    "@types/node": "latest"
+  }
+}
