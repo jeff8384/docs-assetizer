@@ -16,6 +16,8 @@ const CliSchema = z.object({
     .string()
     .default('json,markdown,obsidian')
     .transform((val) => val.split(',').map((s) => s.trim())),
+  timeout: z.coerce.number().int().min(1000).default(20000),
+  retry: z.coerce.number().int().min(0).max(10).default(2),
 });
 
 // Validate formats to the known union
@@ -34,7 +36,9 @@ async function main(): Promise<void> {
     .option('--max-pages <n>', 'Maximum number of pages to crawl', '20')
     .option('--output-dir <path>', 'Directory to write output files', './output')
     .option('--obsidian-path <path>', 'Obsidian vault path for note output')
-    .option('--formats <list>', 'Comma-separated list of output formats: json,markdown,obsidian', 'json,markdown,obsidian');
+    .option('--formats <list>', 'Comma-separated list of output formats: json,markdown,obsidian', 'json,markdown,obsidian')
+    .option('--timeout <ms>', 'Navigation timeout in milliseconds', '20000')
+    .option('--retry <n>', 'Number of retry attempts per page', '2');
 
   program.parse(process.argv);
   const opts = program.opts();
@@ -47,6 +51,8 @@ async function main(): Promise<void> {
     outputDir: opts['outputDir'],
     obsidianPath: opts['obsidianPath'],
     formats: opts['formats'],
+    timeout: opts['timeout'],
+    retry: opts['retry'],
   });
 
   if (!parsed.success) {
@@ -72,6 +78,8 @@ async function main(): Promise<void> {
       : undefined,
     // formatsResult.success guard above ensures data is defined
     outputFormats: formatsResult.data as ('json' | 'markdown' | 'obsidian')[],
+    timeout: parsed.data.timeout,
+    retryCount: parsed.data.retry,
   };
 
   logger.info(`Starting docs-assetizer for topic: ${config.topic}`);

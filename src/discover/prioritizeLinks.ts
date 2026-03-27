@@ -1,34 +1,33 @@
-import { PRIORITY_KEYWORDS, EXCLUDE_KEYWORDS } from '../config.js';
+import { PRIORITY_KEYWORDS, EXCLUDE_KEYWORDS, DOCS_PATH_PREFIXES } from '../config.js';
 import { normalizeUrl } from './normalizeUrl.js';
 
-/**
- * Score a URL path based on priority and exclude keyword lists.
- */
 function scoreUrl(urlString: string): number {
-  const path = urlString.toLowerCase();
+  const lower = urlString.toLowerCase();
+  const pathname = (() => { try { return new URL(urlString).pathname.toLowerCase(); } catch { return lower; } })();
   let score = 0;
 
-  for (const keyword of PRIORITY_KEYWORDS) {
-    if (path.includes(keyword)) {
-      score += 2;
-    }
+  // Docs path prefix bonus
+  if (DOCS_PATH_PREFIXES.some((p) => pathname.startsWith(p))) {
+    score += 5;
   }
 
+  // Priority keyword bonus
+  for (const keyword of PRIORITY_KEYWORDS) {
+    if (pathname.includes(keyword)) score += 2;
+  }
+
+  // Path depth penalty (deeply nested pages are lower priority)
+  const depth = (pathname.match(/\//g) ?? []).length;
+  score -= Math.max(0, depth - 3);
+
+  // Exclude keyword hard penalty
   for (const keyword of EXCLUDE_KEYWORDS) {
-    if (path.includes(keyword)) {
-      score -= 10;
-    }
+    if (lower.includes(keyword)) score -= 20;
   }
 
   return score;
 }
 
-/**
- * Prioritize a list of discovered links:
- * 1. Always include the source URL first.
- * 2. Score remaining links and sort descending.
- * 3. Limit total to maxPages.
- */
 export function prioritizeLinks(
   links: string[],
   sourceUrl: string,
@@ -36,13 +35,9 @@ export function prioritizeLinks(
 ): string[] {
   const normalizedSource = normalizeUrl(sourceUrl) ?? sourceUrl;
 
-  // Separate source from the rest
   const others = links.filter((l) => l !== normalizedSource);
-
-  // Sort by score descending
   const sorted = others.sort((a, b) => scoreUrl(b) - scoreUrl(a));
 
-  // Build final list: source first, then sorted others, capped at maxPages
   const result: string[] = [normalizedSource];
   for (const link of sorted) {
     if (result.length >= maxPages) break;

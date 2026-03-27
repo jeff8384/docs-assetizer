@@ -1,22 +1,13 @@
-import type { CrawlResult, SummaryAsset, PageAsset } from '../types/index.js';
+import type { CrawlResult, SummaryAsset, PageAsset, SummarySection } from '../types/index.js';
+import { classifyPageSection, type SectionType } from './classifySection.js';
 
-// Preferred languages for code examples (in descending priority order)
-const PREFERRED_LANGUAGES = ['typescript', 'javascript', 'python', 'ts', 'js', 'py'];
+const PREFERRED_LANGUAGES = ['typescript', 'javascript', 'python', 'ts', 'js', 'py', 'bash', 'shell'];
+const ACTION_VERBS = ['use', 'create', 'call', 'run', 'install', 'add', 'configure', 'enable', 'import', 'define', 'click', 'fill', 'navigate', 'assert', 'launch'];
+const WARNING_KEYWORDS = ['warning', 'note', 'caution', 'important', 'avoid', "don't", 'deprecated', 'gotcha', 'error', 'never', 'make sure'];
 
-// Action verbs that signal usage patterns
-const ACTION_VERBS = ['use', 'create', 'call', 'run', 'install', 'add', 'configure', 'enable', 'import', 'define'];
-
-// Keywords that signal warnings / gotchas
-const WARNING_KEYWORDS = ['warning', 'note', 'caution', 'important', 'avoid', "don't", 'deprecated', 'gotcha', 'error'];
-
-/**
- * Count heading frequency across all pages and return the top N unique headings.
- */
 function topHeadings(pages: PageAsset[], topN: number): string[] {
   const freq: Map<string, number> = new Map();
-
   for (const page of pages) {
-    // Skip h1-level headings (usually page title) — keep h2/h3-level concepts
     for (const h of page.headings.slice(1)) {
       const normalized = h.toLowerCase().trim();
       if (normalized.length > 2) {
@@ -24,81 +15,99 @@ function topHeadings(pages: PageAsset[], topN: number): string[] {
       }
     }
   }
-
   return [...freq.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, topN)
-    .map(([heading]) =>
-      heading
-        .split(' ')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' '),
-    );
+    .map(([h]) => h.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
 }
 
-/**
- * Rule-based extraction: build a SummaryAsset from a CrawlResult.
- * No LLM calls — pure heuristic analysis.
- */
+function buildSections(pages: PageAsset[]): SummarySection[] {
+  const grouped = new Map<SectionType, PageAsset[]>();
+
+  for (const page of pages) {
+    const type = (page.section as SectionType | undefined) ?? classifyPageSection(page.url, page.title, page.headings);
+    const existing = grouped.get(type) ?? [];
+    existing.push(page);
+    grouped.set(type, existing);
+  }
+
+  const SECTION_ORDER: SectionType[] = ['install', 'concepts', 'usage', 'api', 'debugging', 'other'];
+
+  return SECTION_ORDER
+    .filter((type) => grouped.has(type))
+    .map((type) => {
+      const sectionPages = grouped.get(type)!;
+      const keyHeadings = topHeadings(sectionPages, 5);
+      return {
+        type,
+        pages: sectionPages.map((p) => p.url),
+        keyHeadings,
+      };
+    });
+}
+
 export function buildSummary(result: CrawlResult): SummaryAsset {
   const { topic, pages } = result;
 
-  // One-line summary
   const headingCount = new Set(pages.flatMap((p) => p.headings)).size;
   const oneLineSummary = `A comprehensive guide to ${topic} covering ${headingCount} topics across ${pages.length} pages.`;
 
-  // Key concepts: most frequent h2/h3 headings
+  const sections = buildSections(pages);
   const keyConcepts = topHeadings(pages, 10);
 
-  // Usage patterns: blocks containing action verbs
   const usagePatterns: string[] = [];
   for (const page of pages) {
     for (const block of page.contentBlocks) {
       const lower = block.toLowerCase();
-      const hasVerb = ACTION_VERBS.some((v) => lower.includes(v));
-      if (hasVerb && block.length > 30 && block.length < 500) {
+      if (ACTION_VERBS.some((v) => lower.includes(v)) && block.length > 30 && block.length < 500) {
         usagePatterns.push(block);
+      }
+    }
+    // Also include callout content as usage hints
+    for (const callout of page.callouts ?? []) {
+      if (callout.type === 'tip' || callout.type === 'info') {
+        usagePatterns.push(callout.content);
       }
     }
   }
 
-  // Gotchas: blocks containing warning keywords
   const gotchas: string[] = [];
   for (const page of pages) {
     for (const block of page.contentBlocks) {
       const lower = block.toLowerCase();
-      const hasWarning = WARNING_KEYWORDS.some((w) => lower.includes(w));
-      if (hasWarning && block.length > 20) {
+      if (WARNING_KEYWORDS.some((w) => lower.includes(w)) && block.length > 20) {
         gotchas.push(block);
+      }
+    }
+    // Warning/danger callouts are excellent gotchas
+    for (const callout of page.callouts ?? []) {
+      if (callout.type === 'warning' || callout.type === 'danger') {
+        gotchas.push(`[${callout.type.toUpperCase()}] ${callout.content}`);
       }
     }
   }
 
-  // Code examples: top 5 longest blocks, preferring TS/JS/Python
   const allCodeBlocks = pages.flatMap((p) =>
     p.codeBlocks.map((cb) => ({ fromUrl: p.url, ...cb })),
   );
-
   const preferred = allCodeBlocks.filter((cb) =>
     cb.language ? PREFERRED_LANGUAGES.includes(cb.language.toLowerCase()) : false,
   );
   const others = allCodeBlocks.filter(
     (cb) => !cb.language || !PREFERRED_LANGUAGES.includes(cb.language.toLowerCase()),
   );
-
-  const ranked = [...preferred, ...others].sort((a, b) => b.code.length - a.code.length);
-  const codeExamples = ranked.slice(0, 5);
-
-  // Source URLs
-  const sourceUrls = pages.map((p) => p.url);
+  const codeExamples = [...preferred, ...others]
+    .sort((a, b) => b.code.length - a.code.length)
+    .slice(0, 5);
 
   return {
     topic,
     oneLineSummary,
+    sections,
     keyConcepts,
     usagePatterns: usagePatterns.slice(0, 20),
     gotchas: gotchas.slice(0, 15),
     codeExamples,
-    sourceUrls,
+    sourceUrls: pages.map((p) => p.url),
   };
 }

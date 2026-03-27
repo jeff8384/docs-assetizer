@@ -9,19 +9,20 @@ const slugify: (s: string, opts?: object) => string = (slugifyLib as any).defaul
 
 /**
  * Write raw CrawlResult to JSON.
- * Output path: {outputDir}/{slug(topic)}/raw.json
+ * Output path: {outputDir}/{slug(topic)}/{filename}
  * Returns the absolute file path.
  */
 export async function writeJson(
   outputDir: string,
   topic: string,
   data: CrawlResult,
+  filename = 'raw.json',
 ): Promise<string> {
   const slug = slugify(topic, { lower: true, strict: true });
   const dir = path.join(outputDir, slug);
   await fs.mkdir(dir, { recursive: true });
 
-  const filePath = path.join(dir, 'raw.json');
+  const filePath = path.join(dir, filename);
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 
   return filePath;

@@ -1,0 +1,127 @@
+{
+  "topic": "Playwright",
+  "source": "https://playwright.dev/docs/intro",
+  "crawledAt": "2026-03-27T10:00:00.000Z",
+  "totalPages": 3,
+  "failedPages": [],
+  "pages": [
+    {
+      "url": "https://playwright.dev/docs/intro",
+      "title": "Installation | Playwright",
+      "headings": [
+        "Installation",
+        "Installing Playwright",
+        "What's installed",
+        "System requirements"
+      ],
+      "contentBlocks": [
+        "Playwright Test was created specifically to accommodate the needs of end-to-end testing.",
+        "Install Playwright using npm, yarn, or pnpm to get started quickly.",
+        "The install command downloads Playwright binaries for Chromium, Firefox and WebKit.",
+        "System requirements: Node.js 18+, Windows 10+, macOS 13 Ventura, Debian 11, Ubuntu 22.04."
+      ],
+      "codeBlocks": [
+        {
+          "language": "bash",
+          "code": "npm init playwright@latest"
+        },
+        {
+          "language": "typescript",
+          "code": "import { defineConfig, devices } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: './tests',\n  fullyParallel: true,\n  forbidOnly: !!process.env.CI,\n  retries: process.env.CI ? 2 : 0,\n  workers: process.env.CI ? 1 : undefined,\n  reporter: 'html',\n  use: {\n    baseURL: 'http://127.0.0.1:3000',\n    trace: 'on-first-retry',\n  },\n  projects: [\n    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },\n    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },\n    { name: 'webkit', use: { ...devices['Desktop Safari'] } },\n  ],\n});"
+        }
+      ],
+      "tables": [
+        {
+          "headers": ["Browser", "Supported", "Notes"],
+          "rows": [
+            ["Chromium", "Yes", "Latest stable"],
+            ["Firefox", "Yes", "Latest stable"],
+            ["WebKit", "Yes", "Latest stable"]
+          ]
+        }
+      ],
+      "callouts": [],
+      "links": [
+        "https://playwright.dev/docs/locators",
+        "https://playwright.dev/docs/test-assertions"
+      ],
+      "section": "install"
+    },
+    {
+      "url": "https://playwright.dev/docs/locators",
+      "title": "Locators | Playwright",
+      "headings": [
+        "Locators",
+        "Auto-waiting",
+        "Strictness",
+        "Locating by role",
+        "Locating by label",
+        "Best practices"
+      ],
+      "contentBlocks": [
+        "Locators are the central piece of Playwright's auto-waiting and retry-ability.",
+        "Use page.getByRole() to locate by ARIA role, page.getByText() to locate by text content.",
+        "Locators are strict by default. If a query selector matches more than one element, Playwright will throw an error.",
+        "Auto-waiting means Playwright automatically waits for elements to be visible, enabled, and stable before interacting.",
+        "Use the locator.filter() method to narrow down results based on additional conditions."
+      ],
+      "codeBlocks": [
+        {
+          "language": "typescript",
+          "code": "import { test, expect } from '@playwright/test';\n\ntest('basic test', async ({ page }) => {\n  await page.goto('https://playwright.dev/');\n  await expect(page.getByRole('heading', { name: 'Playwright enables reliable end-to-end testing' })).toBeVisible();\n});"
+        },
+        {
+          "language": "typescript",
+          "code": "// Get by role\nconst button = page.getByRole('button', { name: 'Submit' });\n\n// Get by label\nconst input = page.getByLabel('Username');\n\n// Get by placeholder\nconst search = page.getByPlaceholder('Search...');\n\n// Get by test id\nconst element = page.getByTestId('checkout-button');"
+        }
+      ],
+      "tables": [],
+      "callouts": [
+        {
+          "type": "warning",
+          "content": "Locators are strict. If more than one element matches a locator, Playwright will throw an error. Use filter() to narrow down results."
+        }
+      ],
+      "links": [
+        "https://playwright.dev/docs/intro",
+        "https://playwright.dev/docs/test-assertions"
+      ],
+      "section": "usage"
+    },
+    {
+      "url": "https://playwright.dev/docs/test-assertions",
+      "title": "Assertions | Playwright",
+      "headings": [
+        "Assertions",
+        "Auto-retrying assertions",
+        "Non-retrying assertions",
+        "Soft assertions",
+        "expect API"
+      ],
+      "contentBlocks": [
+        "Playwright uses the expect library for test assertions.",
+        "Auto-retrying assertions will keep checking the condition until it passes or the timeout is reached.",
+        "Use expect(locator).toBeVisible() to assert that an element is visible on the page.",
+        "Soft assertions do not immediately terminate the test — the test will continue after a soft assertion failure.",
+        "Non-retrying assertions like expect(value).toBe() execute immediately without retrying."
+      ],
+      "codeBlocks": [
+        {
+          "language": "typescript",
+          "code": "import { test, expect } from '@playwright/test';\n\ntest('assertions example', async ({ page }) => {\n  await page.goto('https://playwright.dev/');\n\n  // Auto-retrying assertions\n  await expect(page.getByText('Get started')).toBeVisible();\n  await expect(page).toHaveTitle(/Playwright/);\n\n  // Soft assertions\n  await expect.soft(page.getByTestId('status')).toHaveText('Success');\n\n  // Non-retrying assertion\n  expect(1 + 1).toBe(2);\n});"
+        },
+        {
+          "language": "typescript",
+          "code": "// Common assertion matchers\nawait expect(locator).toBeVisible();\nawait expect(locator).toBeHidden();\nawait expect(locator).toBeEnabled();\nawait expect(locator).toBeDisabled();\nawait expect(locator).toHaveText('expected text');\nawait expect(locator).toHaveValue('input value');\nawait expect(page).toHaveURL('https://example.com');\nawait expect(page).toHaveTitle('Page Title');"
+        }
+      ],
+      "tables": [],
+      "callouts": [],
+      "links": [
+        "https://playwright.dev/docs/intro",
+        "https://playwright.dev/docs/locators"
+      ],
+      "section": "api"
+    }
+  ]
+}
