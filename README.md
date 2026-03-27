@@ -5,7 +5,7 @@ Crawls a documentation site with Playwright, extracts structured content, and ou
 
 **Output formats:**
 - `raw.json` — full structured crawl data (pages, headings, code blocks, tables, callouts)
-- `summary.md` — Markdown summary with section classification, key concepts, usage patterns, gotchas, and code examples
+- `summary.md` — Markdown summary with section classification, noise-filtered key concepts, usage patterns, gotchas, and code examples
 - `{topic} 문서 자산.md` — Obsidian-compatible note with YAML frontmatter
 
 ## Design
@@ -28,7 +28,7 @@ See [`samples/playwright/`](samples/playwright/) for real output based on the Pl
 | File | Description |
 |------|-------------|
 | [`raw.json`](samples/playwright/raw.json) | Structured crawl data (pages, code blocks, tables, callouts) |
-| [`summary.md`](samples/playwright/summary.md) | Section-classified Markdown summary |
+| [`summary.md`](samples/playwright/summary.md) | Section-classified Markdown summary with noise-filtered key concepts |
 | [`obsidian-note.md`](samples/playwright/obsidian-note.md) | Obsidian note with YAML frontmatter |
 
 ## Install
